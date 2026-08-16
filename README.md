@@ -1,177 +1,55 @@
-# fx — 為替相対価値分析システムの構想メモ
+# fx — tokenized asset observations
 
-このリポジトリは、為替市場の相対価値（Relative Value、RV）分析、data収集、signal、risk管理、backtestを統合する構想として、2024年9月に作成した設計メモです。
+This repository is being repurposed from an old FX design note into a small primary-source dataset for tokenized assets. The current implementation covers USDC issuer-reported circulation snapshots and an Ethereum USDC transfer-event collector.
 
-**現在、README以外の実装fileはありません。** Python module、Docker Compose、Redis、TimescaleDB、TensorFlow model、data collector、trading engine、testは存在せず、取引systemは稼働していません。
+## Current verified data
 
-> **状態:** design-only / 未実装  
-> **作成時期:** 2024年9月  
-> **live trading:** なし  
-> **backtest結果:** なし  
-> **現在の市場data正準候補:** [`KAFKA2306/investor`](https://github.com/KAFKA2306/investor)
+`data/official/` contains Circle-reported USDC circulation observations:
 
----
+- 2026-07-06: 73.0 billion USDC — Circle MiCA USDC white paper
+- 2026-07-23: 72.9 billion USDC — Circle USDC page
+- 2026-07-27: 72.3 billion USDC — Circle USDC page
 
-## 想定していた目的
+These are issuer-reported observations. They are not derived from Ethereum state and are not reconciled to chain supply in this repository yet.
 
-為替pair間のrelative valueを、同じ時点・同じdata source・同じcost前提で比較する構想です。
+Primary sources:
 
-想定していた機能:
+- https://www.circle.com/legal/mica-usdc-whitepaper
+- https://www.circle.com/usdc
+- https://developers.circle.com/stablecoins/usdc-contract-addresses
 
-- FX rate、金利、inflation、economic indicator、newsの取得
-- timestamp、timezone、単位の正規化
-- correlation、cointegration、spread、z-scoreの分析
-- mean reversionなどのsignal生成
-- position sizing
-- transaction costとslippageを含むbacktest
-- live dataとhistorical dataの分離
+The Ethereum mainnet contract address stored with the snapshots is Circle's documented USDC address: `0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48`.
 
-これらは要件候補であり、実装済み機能ではありません。
+## Ethereum event collector
 
----
+`tokenized_assets.py` requests ERC-20 `Transfer` logs for the Circle-documented Ethereum USDC contract and classifies transfers from the zero address as mint events and transfers to the zero address as burn events.
 
-## 旧READMEに記載されていたが存在しないもの
-
-旧READMEは次を実装済みのように説明していました。
-
-```text
-data_collector/
-data_processor/
-analysis_engine/
-trading_strategy/
-risk_management/
-backtest_engine/
-Dockerfile
-docker-compose.yml
-main.py
-.env.example
-```
-
-2026年8月4日のdefault branchには、これらを確認できません。
-
-また、旧READMEのcode例は設計例であり、repositoryでimport・testできる実装ではありません。clone URLの`yourusername`もplaceholderでした。
-
----
-
-## RV分析を実装する場合の最低条件
-
-### data
-
-- pairとvenue
-- bid / ask / mid
-- timestampとtimezone
-- sampling interval
-- sourceと取得時刻
-- missing・duplicate・outlier処理
-- 金利のtenorとcompounding
-- macro dataの発表時点と改訂
-
-future informationを過去時点へ混入しないpoint-in-time dataが必要です。
-
-### model
-
-- spread定義
-- hedge ratioの推定期間
-- cointegration test
-- entry / exit rule
-- stop condition
-- parameter freeze
-- rolling / expanding validation
-- regime changeの扱い
-
-### cost
-
-- spread
-- commission
-- swap / funding
-- slippage
-- rollover
-- market impact
-- execution delay
-
-costなしのmean reversion signalを運用可能性の証拠にしません。
-
-### risk
-
-- currency exposure
-- leverage
-- correlated positions
-- liquidity
-- drawdown
-- gap risk
-- broker / counterparty risk
-- position limit
-
-旧READMEの単純なposition size式だけでは、FX portfolio riskを表現できません。
-
----
-
-## 実装先の推奨
-
-新しく独立systemを作る前に、`investor`の金利・為替data基盤と研究runtimeへ統合できるか確認します。
-
-```text
-investor
-  公式金利・為替data、point-in-time管理、研究・証拠
-        │
-        └─ FX RV strategy module候補
-
-fx
-  2024年の構想メモ
-  現在は実装正準ではない
-```
-
-同じFRED、ECB、為替dataを複数repoで別々に保存しません。
-
----
-
-## 現在の利用方法
-
-設計文書の閲覧のみです。
+It requires an Ethereum JSON-RPC endpoint supplied through `ETH_RPC_URL`:
 
 ```bash
-git clone https://github.com/KAFKA2306/fx.git
-cd fx
+ETH_RPC_URL=https://your-endpoint.example \
+python tokenized_assets.py --from-block 100 --to-block 200 --output output/usdc-events.json
 ```
 
-install、run、test、Docker起動commandはありません。
+The collector preserves block number, block hash, transaction hash, log index, sender, recipient, and raw token amount. Network collection is not required by the unit tests.
 
----
+## Tests
 
-## セキュリティ
+The repository uses only the Python standard library for its current tests:
 
-公開repositoryへ保存しないもの:
+```bash
+python -m unittest discover -v
+```
 
-- broker API key
-- account ID
-- order・positionのprivate data
-- paid market data
-- News API key
-- database password
-- live trading credential
+The tests verify transfer classification and the stored issuer snapshots, including unique observation dates, positive circulation values, official Circle source URLs, and the Circle-documented Ethereum contract address.
 
-将来live executionを追加する場合、researchとexecutionをprocess・credential・permissionで分離します。AIや分析scriptから直接production orderを送信する構造を既定にしません。
+## Current limitations
 
----
+- The issuer snapshot history contains only three July 2026 observations, not the 90 days requested by Issue #4.
+- Reserve composition and issuance/redemption flows are not yet stored as structured observations.
+- The Ethereum collector is implemented, but this repository does not yet contain a maintained historical chain-event dataset.
+- Issuer-reported circulation and chain-derived supply are intentionally kept separate.
+- No stablecoin other than USDC is currently stored.
+- There is no trading system, backtest, or investment recommendation in this repository.
 
-## 既知の制約
-
-- code、test、data、container設定がありません。
-- API接続を検証していません。
-- backtest結果はありません。
-- model performance、risk、costを測定していません。
-- live order機能はありません。
-- 旧READMEにあるTensorFlow、Redis、TimescaleDB、Dockerは採用済みではありません。
-- 本リポジトリは投資助言、売買推奨、将来収益の保証ではありません。
-
----
-
-## 今後の判断
-
-1. `investor`へ研究要件を統合する
-2. data・model contractを定義してこのrepoでMVPを実装する
-3. 構想メモとしてarchiveする
-
-実装開始前に、source、point-in-time、cost、OOS、execution boundaryを明示します。
-
-**README実体監査:** 2026年8月4日
+Tracking issue: https://github.com/KAFKA2306/fx/issues/4
