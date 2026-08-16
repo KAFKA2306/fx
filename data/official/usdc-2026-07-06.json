@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "asset": "USDC",
+  "issuer": "Circle",
+  "as_of": "2026-07-06",
+  "circulation_usdc": 73000000000,
+  "ethereum_contract_address": "0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48",
+  "sources": [
+    "https://www.circle.com/legal/mica-usdc-whitepaper",
+    "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+  ]
+}

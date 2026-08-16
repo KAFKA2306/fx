@@ -1,3 +1,5 @@
+import unittest
+
 from tokenized_assets import TRANSFER_TOPIC, ZERO_TOPIC, normalize_log
 
 
@@ -16,8 +18,13 @@ def log(sender: str, recipient: str, amount: int):
     }
 
 
-def test_mint_is_transfer_from_zero_address():
-    recipient = topic("0x1111111111111111111111111111111111111111")
-    row = normalize_log(log(ZERO_TOPIC, recipient, 1_000_000))
-    assert row["event_type"] == "mint"
-    assert row["amount_usdc"] == 1.0
+class TransferNormalizationTests(unittest.TestCase):
+    def test_mint_is_transfer_from_zero_address(self):
+        recipient = topic("0x1111111111111111111111111111111111111111")
+        row = normalize_log(log(ZERO_TOPIC, recipient, 1_000_000))
+        self.assertEqual(row["event_type"], "mint")
+        self.assertEqual(row["amount_usdc"], 1.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
