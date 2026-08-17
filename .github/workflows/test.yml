@@ -16,7 +16,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile
-        run: python -m compileall -q tokenized_assets.py test_tokenized_assets.py test_issuer_snapshots.py
       - name: Unit tests
         run: python -m unittest discover -v
