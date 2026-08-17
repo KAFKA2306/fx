@@ -1,5 +1,7 @@
 # fx — tokenized asset observations
 
+[![Test](https://github.com/KAFKA2306/fx/actions/workflows/test.yml/badge.svg)](https://github.com/KAFKA2306/fx/actions/workflows/test.yml)
+
 This repository is being repurposed from an old FX design note into a small primary-source dataset for tokenized assets. The current implementation covers USDC issuer-reported circulation snapshots and an Ethereum USDC transfer-event collector.
 
 ## Current verified data
