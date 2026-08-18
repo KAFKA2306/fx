@@ -1,0 +1,171 @@
+{
+  "records": [
+    {
+      "block_hash": "0xd7e1917886154b1e1a6e1bc9df82cc5812e6177b32fe839eec2c4d79e9097633",
+      "block_number": 25080172,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-05-12T16:16:23+00:00",
+      "target_timestamp": "2026-05-12T16:16:23+00:00",
+      "total_supply": 54374986337.42763,
+      "total_supply_raw": 54374986337427630
+    },
+    {
+      "block_hash": "0x01b2d14ab7068b3398ad82252670eb1732bec2c8bf0fe951426d045c34749c56",
+      "block_number": 25130406,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-05-19T16:16:23+00:00",
+      "target_timestamp": "2026-05-19T16:16:23+00:00",
+      "total_supply": 54136732889.41885,
+      "total_supply_raw": 54136732889418854
+    },
+    {
+      "block_hash": "0xc9c2465ea182cdf2c44a66a68e87d649d5ff1d1eba1982fe9901671b90b2d8ae",
+      "block_number": 25180630,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-05-26T16:16:23+00:00",
+      "target_timestamp": "2026-05-26T16:16:23+00:00",
+      "total_supply": 52707185019.237625,
+      "total_supply_raw": 52707185019237625
+    },
+    {
+      "block_hash": "0x547048d801149c4deea9a558d36ad0d937a8af3981ec4750c0054914f52018b8",
+      "block_number": 25230832,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-06-02T16:16:23+00:00",
+      "target_timestamp": "2026-06-02T16:16:23+00:00",
+      "total_supply": 52068974668.0219,
+      "total_supply_raw": 52068974668021898
+    },
+    {
+      "block_hash": "0x332a948ed2c4580332facd93d727aa5fe68e5f0512e8cae5f3e553e671e1398b",
+      "block_number": 25281006,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-06-09T16:16:23+00:00",
+      "target_timestamp": "2026-06-09T16:16:23+00:00",
+      "total_supply": 52065263502.82641,
+      "total_supply_raw": 52065263502826406
+    },
+    {
+      "block_hash": "0x45f4617fa14edcf1990b793060229718862b04e1adabb974151ccfc8737250cb",
+      "block_number": 25331220,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-06-16T16:16:23+00:00",
+      "target_timestamp": "2026-06-16T16:16:23+00:00",
+      "total_supply": 51983267800.47808,
+      "total_supply_raw": 51983267800478079
+    },
+    {
+      "block_hash": "0x113329320089bd98a08de00375f2a99dd5764aeeee4e992318d7648d3e554dcc",
+      "block_number": 25381446,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-06-23T16:16:23+00:00",
+      "target_timestamp": "2026-06-23T16:16:23+00:00",
+      "total_supply": 51578760721.30718,
+      "total_supply_raw": 51578760721307182
+    },
+    {
+      "block_hash": "0x87f85963e3b55dc0e59db927dc08bc03d9c4aa1a03b8c7efc53f277809989122",
+      "block_number": 25431626,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-06-30T16:16:23+00:00",
+      "target_timestamp": "2026-06-30T16:16:23+00:00",
+      "total_supply": 51231497391.07039,
+      "total_supply_raw": 51231497391070390
+    },
+    {
+      "block_hash": "0xd59f2b9607880deca9d93283d8bdad5fabfd095087a6bfe1da5d659abf7db963",
+      "block_number": 25481807,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-07-07T16:16:23+00:00",
+      "target_timestamp": "2026-07-07T16:16:23+00:00",
+      "total_supply": 50570390740.53843,
+      "total_supply_raw": 50570390740538428
+    },
+    {
+      "block_hash": "0x9a15e6be9723f3e021c43122be3f6207e47d7e90c6d031766c7351f6e13a601c",
+      "block_number": 25532018,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-07-14T16:16:23+00:00",
+      "target_timestamp": "2026-07-14T16:16:23+00:00",
+      "total_supply": 50426041255.308846,
+      "total_supply_raw": 50426041255308845
+    },
+    {
+      "block_hash": "0x90ce54b9ccbb2804517fb28b63bb735515d51f63af09addfb0150bb111613a2f",
+      "block_number": 25582236,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-07-21T16:16:23+00:00",
+      "target_timestamp": "2026-07-21T16:16:23+00:00",
+      "total_supply": 50434185450.248405,
+      "total_supply_raw": 50434185450248403
+    },
+    {
+      "block_hash": "0x3017cd830698bb9104b2bdd6f8c424e340ce23d71d6632aad5a431802aa69e6f",
+      "block_number": 25632455,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-07-28T16:16:23+00:00",
+      "target_timestamp": "2026-07-28T16:16:23+00:00",
+      "total_supply": 50031547975.43426,
+      "total_supply_raw": 50031547975434260
+    },
+    {
+      "block_hash": "0x99b88ce2536489fba9be895d6bbb7ed4ccaf5676e60e2edad7d52d24b3f62a61",
+      "block_number": 25682689,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-08-04T16:16:23+00:00",
+      "target_timestamp": "2026-08-04T16:16:23+00:00",
+      "total_supply": 49584320939.20388,
+      "total_supply_raw": 49584320939203877
+    },
+    {
+      "block_hash": "0x0ba96d011d58f90e4eab787d350ab4c47b180556c02ef6ee343662cb9c587c03",
+      "block_number": 25732888,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-08-11T16:16:23+00:00",
+      "target_timestamp": "2026-08-11T16:16:23+00:00",
+      "total_supply": 49691514175.363556,
+      "total_supply_raw": 49691514175363555
+    },
+    {
+      "block_hash": "0x4b2d1c423211e59542dae19f38be7280d59cdabf9a12630a663164d6fbc1d5ec",
+      "block_number": 25783110,
+      "chain_id": 1,
+      "contract_address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "decimals": 6,
+      "observed_at": "2026-08-18T16:16:23+00:00",
+      "target_timestamp": "2026-08-18T16:16:23+00:00",
+      "total_supply": 49593663065.26015,
+      "total_supply_raw": 49593663065260147
+    }
+  ],
+  "retrieved_at": "2026-08-18T16:33:03.616871+00:00",
+  "schema_version": 1
+}

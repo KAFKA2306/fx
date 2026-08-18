@@ -1,0 +1,46 @@
+{
+  "coverage": {
+    "asset_count": 3,
+    "burn_event_count": 336,
+    "chain_first_time": "2026-05-12T16:16:23+00:00",
+    "chain_last_time": "2026-08-18T16:16:23+00:00",
+    "chain_observation_count": 15,
+    "chain_span_days": 98,
+    "deployment_count": 4,
+    "filing_count": 2,
+    "issuer_first_date": "2026-03-11",
+    "issuer_last_date": "2026-06-30",
+    "issuer_observation_count": 8,
+    "issuer_span_days": 111,
+    "mint_burn_event_count": 974,
+    "mint_event_count": 638,
+    "non_stablecoin_asset_count": 2,
+    "raw_evidence_count": 533
+  },
+  "dataset": "Tokenized assets primary evidence",
+  "retrieved_at": "2026-08-18T16:33:03.616871+00:00",
+  "rules": [
+    "issuer-reported USDC circulation and Ethereum contract totalSupply are separate observations",
+    "reserve fair value and circulation are separate fields",
+    "legal asset identity and token deployment identity are separate records",
+    "multiple official contracts are not merged implicitly",
+    "every on-chain observation is bound to chain_id, block_number and block_hash",
+    "mint and burn are classified only from canonical ERC-20 Transfer zero-address topics",
+    "ordinary peer-to-peer Transfer logs are not persisted because they do not change token supply",
+    "reconciliation keeps observed differences and never applies guessed corrections",
+    "RPC provider is transport; Ethereum block hashes are the chain provenance authority"
+  ],
+  "schema_version": 1,
+  "views": {
+    "chain_weekly": "chain-weekly.json",
+    "chain_weekly_csv": "chain-weekly.csv",
+    "deployments": "deployments.json",
+    "filings": "filings.json",
+    "issuer": "issuer.json",
+    "issuer_csv": "issuer.csv",
+    "mint_burn": "mint-burn.json",
+    "provenance": "provenance.json",
+    "reconciliation": "reconciliation.json",
+    "registry": "registry.json"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "records": [
+    {
+      "asset_id": "buidl",
+      "cik": "0002013810",
+      "filing_accession": "0002004687-25-000001",
+      "filing_date": "2025-07-18",
+      "legal_asset_name": "BlackRock USD Institutional Digital Liquidity Fund Ltd.",
+      "legal_issuer": "BlackRock USD Institutional Digital Liquidity Fund Ltd.",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/2013810/0002004687-25-000001-index.htm"
+    },
+    {
+      "asset_id": "ousg",
+      "cik": "0001957431",
+      "filing_accession": "0001957431-26-000001",
+      "filing_date": "2026-01-20",
+      "legal_asset_name": "Ondo Short-Term US Government Treasuries Fund (OUSG)",
+      "legal_issuer": "Ondo I LP",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1957431/000195743126000001/0001957431-26-000001-index.htm"
+    }
+  ],
+  "schema_version": 1
+}
