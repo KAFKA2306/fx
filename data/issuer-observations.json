@@ -4,6 +4,22 @@
   "observation_scope": "issuer_reported_all_approved_blockchains",
   "observations": [
     {
+      "as_of": "2026-03-11",
+      "circulation_usdc": 78681023356,
+      "reserve_fair_value_usd": 78748550324,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20March%2026.pdf",
+      "report_published_at": "2026-04-29"
+    },
+    {
+      "as_of": "2026-03-31",
+      "circulation_usdc": 77049290538,
+      "reserve_fair_value_usd": 77125330954,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20March%2026.pdf",
+      "report_published_at": "2026-04-29"
+    },
+    {
       "as_of": "2026-04-06",
       "circulation_usdc": 77745231766,
       "reserve_fair_value_usd": 77821343057,
@@ -50,19 +66,11 @@
       "precision": "exact_reported_units",
       "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf",
       "report_published_at": "2026-07-29"
-    },
-    {
-      "as_of": "2026-07-30",
-      "circulation_usdc": 71800000000,
-      "reserve_fair_value_usd": null,
-      "precision": "issuer_page_rounded_to_0.1_billion",
-      "source_url": "https://www.circle.com/usdc",
-      "report_published_at": null
     }
   ],
   "rules": [
     "issuer-reported all-chain circulation is not treated as Ethereum totalSupply",
     "reserve values remain separate from circulation values",
-    "rounded issuer-page observations are labeled and never upgraded to exact values"
+    "all observations in this canonical file use exact units from Circle reserve reports"
   ]
 }
