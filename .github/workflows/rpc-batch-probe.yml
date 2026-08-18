@@ -1,0 +1,54 @@
+name: Ethereum RPC batch probe
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Probe archive call logs and batch
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+
+          endpoints = [
+              'https://eth.drpc.org',
+              'https://eth.llamarpc.com',
+              'https://eth-mainnet.public.blastapi.io',
+              'https://1rpc.io/eth',
+              'https://eth.merkle.io',
+              'https://rpc.payload.de',
+          ]
+          usdc='0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48'
+          topic='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+          zero='0x'+'0'*64
+          def send(url, body):
+              req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Content-Type':'application/json','User-Agent':'KAFKA2306/tokenized-assets'},method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read())
+          for url in endpoints:
+              try:
+                  final=send(url,{'jsonrpc':'2.0','id':1,'method':'eth_getBlockByNumber','params':['finalized',False]})['result']
+                  n=int(final['number'],16); old=n-650000
+                  supply=send(url,{'jsonrpc':'2.0','id':2,'method':'eth_call','params':[{'to':usdc,'data':'0x18160ddd'},hex(old)]})
+                  if supply.get('error'): raise RuntimeError(supply['error'])
+                  logs=send(url,{'jsonrpc':'2.0','id':3,'method':'eth_getLogs','params':[{'address':usdc,'fromBlock':hex(n-100),'toBlock':hex(n),'topics':[topic,zero]}]})
+                  if logs.get('error'): raise RuntimeError(logs['error'])
+                  batch=send(url,[
+                      {'jsonrpc':'2.0','id':10,'method':'eth_getBlockByNumber','params':[hex(n-1),False]},
+                      {'jsonrpc':'2.0','id':11,'method':'eth_getBlockByNumber','params':[hex(n),False]},
+                  ])
+                  if not isinstance(batch,list) or len(batch)!=2 or any(row.get('error') for row in batch):
+                      raise RuntimeError(f'bad batch response: {batch}')
+                  print('FULL_BATCH_OK',url,n,old,len(logs['result']))
+              except Exception as exc:
+                  print('FAIL',url,type(exc).__name__,str(exc))
+          PY
