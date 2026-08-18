@@ -4,67 +4,148 @@ on:
   pull_request:
     paths:
       - tokenized_assets.py
+      - test_*.py
       - data/registry.json
       - data/issuer-observations.json
       - .github/workflows/tokenized-assets.yml
       - README.md
+  push:
+    branches: [main]
+    paths:
+      - tokenized_assets.py
+      - test_*.py
+      - data/registry.json
+      - data/issuer-observations.json
+      - .github/workflows/tokenized-assets.yml
+      - README.md
+  schedule:
+    - cron: '40 20 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: tokenized-assets-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Existing tests
-        run: python -m unittest discover -v
-      - name: Probe Ethereum RPC transport capabilities
+
+      - name: Compile and unit test
+        run: |
+          python -m py_compile tokenized_assets.py test_issuer_snapshots.py test_tokenized_assets.py
+          python -m unittest discover -v
+
+      - name: Collect primary evidence
+        env:
+          ETH_RPC_URL: https://eth.drpc.org
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python tokenized_assets.py \
+              --data-root build/data/tokenized-assets \
+              --api-dir build/api/v1/tokenized-assets
+          else
+            python tokenized_assets.py
+          fi
+
+      - name: Audit provenance and coverage
         run: |
           python - <<'PY'
-          import json, urllib.request
+          import hashlib
+          import json
+          from pathlib import Path
 
-          endpoints = [
-              'https://ethereum-rpc.publicnode.com',
-              'https://rpc.flashbots.net',
-              'https://cloudflare-eth.com',
-              'https://eth.drpc.org',
-              'https://rpc.ankr.com/eth',
-          ]
-          usdc = '0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48'
-          topic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-          zero = '0x' + '0'*64
+          if '${{ github.event_name }}' == 'pull_request':
+              data_root = Path('build/data/tokenized-assets')
+              api = Path('build/api/v1/tokenized-assets')
+          else:
+              data_root = Path('data/tokenized-assets')
+              api = Path('api/v1/tokenized-assets')
 
-          def rpc(url, method, params):
-              raw = json.dumps({'jsonrpc':'2.0','id':method,'method':method,'params':params}).encode()
-              req = urllib.request.Request(url, data=raw, headers={'Content-Type':'application/json','User-Agent':'KAFKA2306/tokenized-assets'}, method='POST')
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  payload = json.loads(r.read())
-              if payload.get('error'):
-                  raise RuntimeError(payload['error'])
-              return payload['result']
+          index = json.loads((api / 'index.json').read_text())
+          registry = json.loads((api / 'registry.json').read_text())
+          issuer = json.loads((api / 'issuer.json').read_text())['records']
+          chain = json.loads((api / 'chain-weekly.json').read_text())['records']
+          deployments = json.loads((api / 'deployments.json').read_text())['records']
+          mint_burn = json.loads((api / 'mint-burn.json').read_text())
+          filings = json.loads((api / 'filings.json').read_text())['records']
+          reconciliation = json.loads((api / 'reconciliation.json').read_text())['records']
+          manifest = json.loads((data_root / 'raw/latest-manifest.json').read_text())
 
-          successes = []
-          for url in endpoints:
-              try:
-                  finalized = rpc(url, 'eth_getBlockByNumber', ['finalized', False])
-                  number = int(finalized['number'], 16)
-                  historical_number = number - 650000
-                  historical = rpc(url, 'eth_getBlockByNumber', [hex(historical_number), False])
-                  current_supply = rpc(url, 'eth_call', [{'to':usdc,'data':'0x18160ddd'}, 'finalized'])
-                  historical_supply = rpc(url, 'eth_call', [{'to':usdc,'data':'0x18160ddd'}, hex(historical_number)])
-                  logs = rpc(url, 'eth_getLogs', [{'address':usdc,'fromBlock':hex(number-1000),'toBlock':hex(number),'topics':[topic,zero]}])
-                  assert historical and current_supply and historical_supply
-                  print('FULL_OK', url, number, historical_number, int(current_supply,16), int(historical_supply,16), len(logs))
-                  successes.append(url)
-              except Exception as exc:
-                  print('PROBE_FAIL', url, type(exc).__name__, str(exc))
-          if not successes:
-              raise SystemExit('No RPC transport supports finalized + archive eth_call + logs')
-          print('USABLE_RPC', successes)
+          coverage = index['coverage']
+          assert coverage['issuer_span_days'] >= 90, coverage
+          assert coverage['chain_span_days'] >= 90, coverage
+          assert coverage['issuer_observation_count'] >= 8, coverage
+          assert coverage['chain_observation_count'] >= 14, coverage
+          assert coverage['non_stablecoin_asset_count'] >= 2, coverage
+          assert coverage['deployment_count'] >= 4, coverage
+          assert coverage['filing_count'] >= 2, coverage
+          assert coverage['mint_event_count'] > 0, coverage
+          assert coverage['burn_event_count'] > 0, coverage
+          assert coverage['mint_burn_event_count'] > 0, coverage
+
+          assert all(row['reserve_fair_value_usd'] >= row['circulation_usdc'] for row in issuer)
+          assert all(len(row['source_sha256']) == 64 for row in issuer)
+          assert all(row['chain_id'] == 1 and row['block_hash'] for row in chain)
+          assert all(row['contract_address'].lower() == '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' for row in chain)
+          assert all(row['chain_id'] == 1 and row['block_hash'] and row['contract_source_url'].startswith('https://') for row in deployments)
+          assert {'usdc', 'buidl', 'ousg'} <= {row['asset_id'] for row in deployments}
+          assert {'buidl', 'ousg'} <= {row['asset_id'] for row in filings}
+          assert all(row['chain_id'] == 1 and row['block_hash'] for row in mint_burn['events'])
+          assert all(row['event_type'] in {'mint', 'burn'} for row in mint_burn['events'])
+          assert all(row['correction_applied'] is False for row in reconciliation)
+          assert all('not_like_for_like' in row['comparison_scope'] for row in reconciliation)
+
+          assets = {row['asset_id']: row for row in registry['assets']}
+          assert len(assets['buidl']['token_deployments']) == 2
+          assert len(assets['ousg']['token_deployments']) == 1
+
+          for key, item in manifest['evidence'].items():
+              raw = (data_root / item['path']).read_bytes()
+              assert hashlib.sha256(raw).hexdigest() == item['sha256'], key
           PY
+
+      - name: Rebuild API from stored evidence
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            DATA_ROOT=build/data/tokenized-assets
+            API_ROOT=build/api/v1/tokenized-assets
+          else
+            DATA_ROOT=data/tokenized-assets
+            API_ROOT=api/v1/tokenized-assets
+          fi
+          rm -rf build/rebuilt-tokenized-assets
+          python tokenized_assets.py \
+            --offline \
+            --data-root "$DATA_ROOT" \
+            --api-dir build/rebuilt-tokenized-assets
+          diff -ru "$API_ROOT" build/rebuilt-tokenized-assets
+
+      - name: Upload pull-request evidence
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tokenized-assets-evidence
+          path: build
+          retention-days: 30
+
+      - name: Commit changed evidence and views
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/tokenized-assets api/v1/tokenized-assets
+          if git diff --cached --quiet; then
+            echo 'No tokenized-assets evidence change.'
+            exit 0
+          fi
+          git commit -m 'data: update tokenized assets evidence'
+          git push
