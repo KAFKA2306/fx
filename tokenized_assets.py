@@ -152,32 +152,34 @@ class EthereumRPC:
         return payload["result"]
 
     def batch_blocks(self, block_numbers: list[int], key: str) -> dict[int, dict[str, Any]]:
-        bodies = []
-        id_to_block: dict[int, int] = {}
-        for block_num in block_numbers:
-            self.counter += 1
-            request_id = self.counter
-            id_to_block[request_id] = block_num
-            bodies.append(
-                {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "method": "eth_getBlockByNumber",
-                    "params": [hex(block_num), False],
-                }
-            )
-        payload = self._request(bodies, key)
-        if not isinstance(payload, list):
-            raise ValueError("Ethereum RPC does not support JSON-RPC batch responses")
         result: dict[int, dict[str, Any]] = {}
-        for row in payload:
-            if row.get("error"):
-                raise RuntimeError(f"batch eth_getBlockByNumber: {row['error']}")
-            block_num = id_to_block[int(row["id"])]
-            block = row.get("result")
-            if not block:
-                raise ValueError(f"missing block {block_num} in batch response")
-            result[block_num] = block
+        for offset in range(0, len(block_numbers), 2):
+            chunk = block_numbers[offset : offset + 2]
+            bodies = []
+            id_to_block: dict[int, int] = {}
+            for block_num in chunk:
+                self.counter += 1
+                request_id = self.counter
+                id_to_block[request_id] = block_num
+                bodies.append(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "eth_getBlockByNumber",
+                        "params": [hex(block_num), False],
+                    }
+                )
+            payload = self._request(bodies, f"{key}:chunk:{offset // 2}")
+            if not isinstance(payload, list):
+                raise ValueError("Ethereum RPC does not support JSON-RPC batch responses")
+            for row in payload:
+                if row.get("error"):
+                    raise RuntimeError(f"batch eth_getBlockByNumber: {row['error']}")
+                block_num = id_to_block[int(row["id"])]
+                block = row.get("result")
+                if not block:
+                    raise ValueError(f"missing block {block_num} in batch response")
+                result[block_num] = block
         if set(result) != set(block_numbers):
             raise ValueError("incomplete block batch response")
         return result
