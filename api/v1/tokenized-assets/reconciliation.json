@@ -3,38 +3,38 @@
     {
       "comparison_scope": "not_like_for_like_all_chain_vs_ethereum_native",
       "correction_applied": false,
-      "ethereum_block_hash": "0xc9c2465ea182cdf2c44a66a68e87d649d5ff1d1eba1982fe9901671b90b2d8ae",
-      "ethereum_block_number": 25180630,
-      "ethereum_native_total_supply_usdc": 52707185019.237625,
-      "ethereum_observed_at": "2026-05-26T16:16:23+00:00",
+      "ethereum_block_hash": "0x4684f5fc4a02a395e7a6e60ac544c4b4e36c612c339ca6e6d00d452feec8d6e1",
+      "ethereum_block_number": 25181937,
+      "ethereum_native_total_supply_usdc": 52697601189.75163,
+      "ethereum_observed_at": "2026-05-26T20:38:47+00:00",
       "issuer_all_chain_circulation_usdc": 75885403148.0,
-      "issuer_all_chain_minus_ethereum_native_usdc": 23178218128.762375,
+      "issuer_all_chain_minus_ethereum_native_usdc": 23187801958.248367,
       "issuer_as_of": "2026-05-29",
-      "observation_distance_days": 2.3219560185185184
+      "observation_distance_days": 2.139733796296296
     },
     {
       "comparison_scope": "not_like_for_like_all_chain_vs_ethereum_native",
       "correction_applied": false,
-      "ethereum_block_hash": "0x547048d801149c4deea9a558d36ad0d937a8af3981ec4750c0054914f52018b8",
-      "ethereum_block_number": 25230832,
-      "ethereum_native_total_supply_usdc": 52068974668.0219,
-      "ethereum_observed_at": "2026-06-02T16:16:23+00:00",
+      "ethereum_block_hash": "0xa2ded8b753b63d43fbba7753c5c5351c1129779303364e5d1e9d95ec79e397b9",
+      "ethereum_block_number": 25232139,
+      "ethereum_native_total_supply_usdc": 52089821725.076965,
+      "ethereum_observed_at": "2026-06-02T20:38:47+00:00",
       "issuer_all_chain_circulation_usdc": 75812529265.0,
-      "issuer_all_chain_minus_ethereum_native_usdc": 23743554596.978104,
+      "issuer_all_chain_minus_ethereum_native_usdc": 23722707539.923035,
       "issuer_as_of": "2026-06-02",
-      "observation_distance_days": 0.6780439814814815
+      "observation_distance_days": 0.8602662037037037
     },
     {
       "comparison_scope": "not_like_for_like_all_chain_vs_ethereum_native",
       "correction_applied": false,
-      "ethereum_block_hash": "0x87f85963e3b55dc0e59db927dc08bc03d9c4aa1a03b8c7efc53f277809989122",
-      "ethereum_block_number": 25431626,
-      "ethereum_native_total_supply_usdc": 51231497391.07039,
-      "ethereum_observed_at": "2026-06-30T16:16:23+00:00",
+      "ethereum_block_hash": "0x458e79e7a8eac3d9fcfda3b585824f33af2704fdb552f2bfadacbdce427824ef",
+      "ethereum_block_number": 25432934,
+      "ethereum_native_total_supply_usdc": 51102844794.36698,
+      "ethereum_observed_at": "2026-06-30T20:38:47+00:00",
       "issuer_all_chain_circulation_usdc": 73268560097.0,
-      "issuer_all_chain_minus_ethereum_native_usdc": 22037062705.92961,
+      "issuer_all_chain_minus_ethereum_native_usdc": 22165715302.63302,
       "issuer_as_of": "2026-06-30",
-      "observation_distance_days": 0.6780439814814815
+      "observation_distance_days": 0.8602662037037037
     }
   ],
   "schema_version": 1
