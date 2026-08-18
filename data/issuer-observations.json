@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "asset_id": "usdc",
+  "observation_scope": "issuer_reported_all_approved_blockchains",
+  "observations": [
+    {
+      "as_of": "2026-04-06",
+      "circulation_usdc": 77745231766,
+      "reserve_fair_value_usd": 77821343057,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20April%2026.pdf",
+      "report_published_at": "2026-05-28"
+    },
+    {
+      "as_of": "2026-04-30",
+      "circulation_usdc": 77047590794,
+      "reserve_fair_value_usd": 77123668726,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20April%2026.pdf",
+      "report_published_at": "2026-05-28"
+    },
+    {
+      "as_of": "2026-05-05",
+      "circulation_usdc": 77963911020,
+      "reserve_fair_value_usd": 78039990342,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "report_published_at": "2026-06-29"
+    },
+    {
+      "as_of": "2026-05-29",
+      "circulation_usdc": 75885403148,
+      "reserve_fair_value_usd": 75961621872,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf",
+      "report_published_at": "2026-06-29"
+    },
+    {
+      "as_of": "2026-06-02",
+      "circulation_usdc": 75812529265,
+      "reserve_fair_value_usd": 75888747989,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf",
+      "report_published_at": "2026-07-29"
+    },
+    {
+      "as_of": "2026-06-30",
+      "circulation_usdc": 73268560097,
+      "reserve_fair_value_usd": 73344909176,
+      "precision": "exact_reported_units",
+      "source_url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf",
+      "report_published_at": "2026-07-29"
+    },
+    {
+      "as_of": "2026-07-30",
+      "circulation_usdc": 71800000000,
+      "reserve_fair_value_usd": null,
+      "precision": "issuer_page_rounded_to_0.1_billion",
+      "source_url": "https://www.circle.com/usdc",
+      "report_published_at": null
+    }
+  ],
+  "rules": [
+    "issuer-reported all-chain circulation is not treated as Ethereum totalSupply",
+    "reserve values remain separate from circulation values",
+    "rounded issuer-page observations are labeled and never upgraded to exact values"
+  ]
+}
