@@ -24,14 +24,23 @@ jobs:
           python-version: '3.12'
       - name: Existing tests
         run: python -m unittest discover -v
-      - name: Probe Ethereum finalized and archive access
-        env:
-          ETH_RPC_URL: https://ethereum-rpc.publicnode.com
+      - name: Probe Ethereum RPC transport capabilities
         run: |
           python - <<'PY'
-          import json, os, urllib.request
-          url = os.environ['ETH_RPC_URL']
-          def rpc(method, params):
+          import json, urllib.request
+
+          endpoints = [
+              'https://ethereum-rpc.publicnode.com',
+              'https://rpc.flashbots.net',
+              'https://cloudflare-eth.com',
+              'https://eth.drpc.org',
+              'https://rpc.ankr.com/eth',
+          ]
+          usdc = '0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48'
+          topic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+          zero = '0x' + '0'*64
+
+          def rpc(url, method, params):
               raw = json.dumps({'jsonrpc':'2.0','id':method,'method':method,'params':params}).encode()
               req = urllib.request.Request(url, data=raw, headers={'Content-Type':'application/json','User-Agent':'KAFKA2306/tokenized-assets'}, method='POST')
               with urllib.request.urlopen(req, timeout=30) as r:
@@ -39,18 +48,23 @@ jobs:
               if payload.get('error'):
                   raise RuntimeError(payload['error'])
               return payload['result']
-          finalized = rpc('eth_getBlockByNumber', ['finalized', False])
-          number = int(finalized['number'], 16)
-          print('FINALIZED', number, finalized['hash'], int(finalized['timestamp'],16))
-          historical = rpc('eth_getBlockByNumber', [hex(number - 650000), False])
-          print('ARCHIVE', int(historical['number'],16), historical['hash'], int(historical['timestamp'],16))
-          usdc = '0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48'
-          supply = rpc('eth_call', [{'to':usdc,'data':'0x18160ddd'}, hex(number - 650000)])
-          print('USDC_HISTORICAL_TOTAL_SUPPLY_RAW', int(supply,16))
-          topic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-          zero = '0x' + '0'*64
-          logs = rpc('eth_getLogs', [{'address':usdc,'fromBlock':hex(number-5000),'toBlock':hex(number),'topics':[topic,zero]}])
-          print('MINT_LOGS_LAST_5000_BLOCKS', len(logs))
-          if logs:
-              assert logs[0]['blockHash'] and logs[0]['transactionHash']
+
+          successes = []
+          for url in endpoints:
+              try:
+                  finalized = rpc(url, 'eth_getBlockByNumber', ['finalized', False])
+                  number = int(finalized['number'], 16)
+                  historical_number = number - 650000
+                  historical = rpc(url, 'eth_getBlockByNumber', [hex(historical_number), False])
+                  current_supply = rpc(url, 'eth_call', [{'to':usdc,'data':'0x18160ddd'}, 'finalized'])
+                  historical_supply = rpc(url, 'eth_call', [{'to':usdc,'data':'0x18160ddd'}, hex(historical_number)])
+                  logs = rpc(url, 'eth_getLogs', [{'address':usdc,'fromBlock':hex(number-1000),'toBlock':hex(number),'topics':[topic,zero]}])
+                  assert historical and current_supply and historical_supply
+                  print('FULL_OK', url, number, historical_number, int(current_supply,16), int(historical_supply,16), len(logs))
+                  successes.append(url)
+              except Exception as exc:
+                  print('PROBE_FAIL', url, type(exc).__name__, str(exc))
+          if not successes:
+              raise SystemExit('No RPC transport supports finalized + archive eth_call + logs')
+          print('USABLE_RPC', successes)
           PY
