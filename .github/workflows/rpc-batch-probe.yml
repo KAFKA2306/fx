@@ -15,40 +15,29 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Probe archive call logs and batch
+      - name: Measure dRPC batch size and recent USDC supply events
         run: |
           python - <<'PY'
           import json, urllib.request
-
-          endpoints = [
-              'https://eth.drpc.org',
-              'https://eth.llamarpc.com',
-              'https://eth-mainnet.public.blastapi.io',
-              'https://1rpc.io/eth',
-              'https://eth.merkle.io',
-              'https://rpc.payload.de',
-          ]
+          url='https://eth.drpc.org'
           usdc='0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48'
           topic='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
           zero='0x'+'0'*64
-          def send(url, body):
+          def send(body):
               req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Content-Type':'application/json','User-Agent':'KAFKA2306/tokenized-assets'},method='POST')
               with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read())
-          for url in endpoints:
+          final=send({'jsonrpc':'2.0','id':1,'method':'eth_getBlockByNumber','params':['finalized',False]})['result']
+          n=int(final['number'],16)
+          for size in [5,10,20,50,100]:
+              body=[{'jsonrpc':'2.0','id':i+1,'method':'eth_getBlockByNumber','params':[hex(n-i),False]} for i in range(size)]
               try:
-                  final=send(url,{'jsonrpc':'2.0','id':1,'method':'eth_getBlockByNumber','params':['finalized',False]})['result']
-                  n=int(final['number'],16); old=n-650000
-                  supply=send(url,{'jsonrpc':'2.0','id':2,'method':'eth_call','params':[{'to':usdc,'data':'0x18160ddd'},hex(old)]})
-                  if supply.get('error'): raise RuntimeError(supply['error'])
-                  logs=send(url,{'jsonrpc':'2.0','id':3,'method':'eth_getLogs','params':[{'address':usdc,'fromBlock':hex(n-100),'toBlock':hex(n),'topics':[topic,zero]}]})
-                  if logs.get('error'): raise RuntimeError(logs['error'])
-                  batch=send(url,[
-                      {'jsonrpc':'2.0','id':10,'method':'eth_getBlockByNumber','params':[hex(n-1),False]},
-                      {'jsonrpc':'2.0','id':11,'method':'eth_getBlockByNumber','params':[hex(n),False]},
-                  ])
-                  if not isinstance(batch,list) or len(batch)!=2 or any(row.get('error') for row in batch):
-                      raise RuntimeError(f'bad batch response: {batch}')
-                  print('FULL_BATCH_OK',url,n,old,len(logs['result']))
+                  result=send(body)
+                  ok=isinstance(result,list) and len(result)==size and all(not row.get('error') for row in result)
+                  print('BATCH',size,'OK' if ok else 'BAD',len(result) if isinstance(result,list) else type(result).__name__)
               except Exception as exc:
-                  print('FAIL',url,type(exc).__name__,str(exc))
+                  print('BATCH',size,'FAIL',type(exc).__name__,str(exc))
+          for window in [20,50,100]:
+              mint=send({'jsonrpc':'2.0','id':1000+window,'method':'eth_getLogs','params':[{'address':usdc,'fromBlock':hex(n-window+1),'toBlock':hex(n),'topics':[topic,zero]}]})
+              burn=send({'jsonrpc':'2.0','id':2000+window,'method':'eth_getLogs','params':[{'address':usdc,'fromBlock':hex(n-window+1),'toBlock':hex(n),'topics':[topic,None,zero]}]})
+              print('WINDOW',window,'MINT',len(mint.get('result',[])),'BURN',len(burn.get('result',[])),'UNIQUE_BLOCKS',len({int(x['blockNumber'],16) for x in mint.get('result',[])+burn.get('result',[])}))
           PY
