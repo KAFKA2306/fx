@@ -1,43 +1,51 @@
 import json
 import unittest
 from pathlib import Path
-from urllib.parse import urlparse
 
-from tokenized_assets import USDC
-
-
-DATA_DIR = Path("data/official")
-EXPECTED = {
-    "2026-07-06": 73_000_000_000,
-    "2026-07-23": 72_900_000_000,
-    "2026-07-27": 72_300_000_000,
-}
+from tokenized_assets import (
+    reconciliation_rows,
+    validate_issuer_observations,
+    validate_registry,
+)
 
 
 class IssuerSnapshotTests(unittest.TestCase):
-    def test_usdc_snapshots_are_primary_source_observations(self):
-        snapshots = []
-        for path in sorted(DATA_DIR.glob("usdc-*.json")):
-            snapshots.append(json.loads(path.read_text(encoding="utf-8")))
+    def test_usdc_issuer_evidence_spans_ninety_days_with_reserves(self):
+        payload = json.loads(Path("data/issuer-observations.json").read_text())
+        validate_issuer_observations(payload)
+        rows = payload["observations"]
+        self.assertEqual(rows[0]["as_of"], "2026-03-11")
+        self.assertEqual(rows[-1]["as_of"], "2026-06-30")
+        self.assertTrue(all(row["circulation_usdc"] > 0 for row in rows))
+        self.assertTrue(all(row["reserve_fair_value_usd"] >= row["circulation_usdc"] for row in rows))
+        self.assertTrue(all("hubspotusercontent-na1.net" in row["source_url"] for row in rows))
 
-        self.assertGreaterEqual(len(snapshots), len(EXPECTED))
-        dates = [row["as_of"] for row in snapshots]
-        self.assertEqual(len(dates), len(set(dates)))
+    def test_registry_separates_legal_assets_and_token_deployments(self):
+        registry = json.loads(Path("data/registry.json").read_text())
+        validate_registry(registry)
+        assets = {row["asset_id"]: row for row in registry["assets"]}
+        self.assertEqual(assets["buidl"]["legal_asset"]["cik"], "0002013810")
+        self.assertEqual(assets["ousg"]["legal_asset"]["cik"], "0001957431")
+        self.assertEqual(len(assets["buidl"]["token_deployments"]), 2)
+        self.assertNotEqual(
+            assets["buidl"]["token_deployments"][0]["deployment_id"],
+            assets["buidl"]["token_deployments"][1]["deployment_id"],
+        )
 
-        by_date = {row["as_of"]: row for row in snapshots}
-        for as_of, expected_supply in EXPECTED.items():
-            row = by_date[as_of]
-            self.assertEqual(row["schema_version"], 1)
-            self.assertEqual(row["asset"], "USDC")
-            self.assertEqual(row["issuer"], "Circle")
-            self.assertEqual(row["circulation_usdc"], expected_supply)
-            self.assertGreater(row["circulation_usdc"], 0)
-            self.assertEqual(row["ethereum_contract_address"].lower(), USDC.lower())
-            self.assertTrue(row["sources"])
-            for source in row["sources"]:
-                parsed = urlparse(source)
-                self.assertEqual(parsed.scheme, "https")
-                self.assertIn(parsed.hostname, {"www.circle.com", "developers.circle.com"})
+    def test_reconciliation_preserves_scope_difference(self):
+        issuer = [{"as_of": "2026-05-01", "circulation_usdc": 100.0}]
+        chain = [
+            {
+                "observed_at": "2026-05-01T00:00:00+00:00",
+                "block_number": 123,
+                "block_hash": "0xabc",
+                "total_supply": 60.0,
+            }
+        ]
+        rows = reconciliation_rows(issuer, chain)
+        self.assertEqual(rows[0]["issuer_all_chain_minus_ethereum_native_usdc"], 40.0)
+        self.assertFalse(rows[0]["correction_applied"])
+        self.assertIn("not_like_for_like", rows[0]["comparison_scope"])
 
 
 if __name__ == "__main__":

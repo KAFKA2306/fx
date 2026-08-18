@@ -1,57 +1,108 @@
-# fx — tokenized asset observations
+# Tokenized Assets Primary Evidence
 
-[![Test](https://github.com/KAFKA2306/fx/actions/workflows/test.yml/badge.svg)](https://github.com/KAFKA2306/fx/actions/workflows/test.yml)
+[![Tokenized assets evidence](https://github.com/KAFKA2306/fx/actions/workflows/tokenized-assets.yml/badge.svg)](https://github.com/KAFKA2306/fx/actions/workflows/tokenized-assets.yml)
 
-This repository is being repurposed from an old FX design note into a small primary-source dataset for tokenized assets. The current implementation covers USDC issuer-reported circulation snapshots and an Ethereum USDC transfer-event collector.
+Tokenized assetを**発行体の一次開示・法的asset identity・Ethereum上のtoken deployment・block-level evidence**へ分離し、raw evidenceから再生成可能なdatasetとして保存します。旧FX signal/backtestではなく、`api/v1/tokenized-assets/` が正準成果物です。
 
-## Current verified data
+## 正準data
 
-`data/official/` contains Circle-reported USDC circulation observations:
+- [dataset index](api/v1/tokenized-assets/index.json)
+- [asset / deployment registry](api/v1/tokenized-assets/registry.json)
+- [USDC issuer observations](api/v1/tokenized-assets/issuer.json)
+- [USDC Ethereum weekly supply](api/v1/tokenized-assets/chain-weekly.json)
+- [current deployment snapshots](api/v1/tokenized-assets/deployments.json)
+- [USDC mint / burn evidence](api/v1/tokenized-assets/mint-burn.json)
+- [SEC filing ledger](api/v1/tokenized-assets/filings.json)
+- [issuer ↔ chain reconciliation](api/v1/tokenized-assets/reconciliation.json)
+- [raw provenance manifest](api/v1/tokenized-assets/provenance.json)
 
-- 2026-07-06: 73.0 billion USDC — Circle MiCA USDC white paper
-- 2026-07-23: 72.9 billion USDC — Circle USDC page
-- 2026-07-27: 72.3 billion USDC — Circle USDC page
+`Tokenized assets evidence` workflowが毎日一次情報を取得し、raw response / issuer documentをSHA-256で固定した後、同じevidenceからAPIを生成します。CIでは保存済みevidenceだけでoffline再生成し、live生成物との差分がないことを検証します。
 
-These are issuer-reported observations. They are not derived from Ethereum state and are not reconciled to chain supply in this repository yet.
+## USDC: issuer factとchain factを混ぜない
 
-Primary sources:
+Circle reserve reportのissuer observationでは、all approved blockchainsを対象とするUSDC circulationとreserve fair valueを別fieldで保持します。
 
-- https://www.circle.com/legal/mica-usdc-whitepaper
-- https://www.circle.com/usdc
-- https://developers.circle.com/stablecoins/usdc-contract-addresses
+Ethereum側ではCircleが公開するnative USDC contractについて、finalized Ethereum blockを基準に週次`totalSupply()`を観測します。各recordは最低限次を持ちます。
 
-The Ethereum mainnet contract address stored with the snapshots is Circle's documented USDC address: `0xA0b86991c6218b36c1d19d4a2e9Eb0cE3606eB48`.
-
-## Ethereum event collector
-
-`tokenized_assets.py` requests ERC-20 `Transfer` logs for the Circle-documented Ethereum USDC contract and classifies transfers from the zero address as mint events and transfers to the zero address as burn events.
-
-It requires an Ethereum JSON-RPC endpoint supplied through `ETH_RPC_URL`:
-
-```bash
-ETH_RPC_URL=https://your-endpoint.example \
-python tokenized_assets.py --from-block 100 --to-block 200 --output output/usdc-events.json
+```text
+chain_id
+block_number
+block_hash
+contract_address
+observed_at
+total_supply_raw
+decimals
+total_supply
 ```
 
-The collector preserves block number, block hash, transaction hash, log index, sender, recipient, and raw token amount. Network collection is not required by the unit tests.
+issuer-reported all-chain circulationとEthereum native `totalSupply()`はscopeが異なるため、同じ値として補正しません。`reconciliation.json`には観測差をそのまま残し、`correction_applied: false`を固定します。
 
-## Tests
+## Mint / burn
 
-The repository uses only the Python standard library for its current tests:
+USDCのsupply-changing eventだけをEthereum `Transfer` logから抽出します。
+
+- `from == 0x0` → mint
+- `to == 0x0` → burn
+- 通常のpeer-to-peer transfer → supplyを変えないため正準event ledgerには保存しない
+
+各eventはblock number/hash、transaction hash、log indexを保持します。RPC providerはtransportであり、provenance authorityはEthereumのchain IDとblock hashです。
+
+## Tokenized funds
+
+stablecoin以外もlegal assetとtoken deploymentを分けて登録します。
+
+### BUIDL
+
+BlackRock USD Institutional Digital Liquidity Fund Ltd.をlegal assetとして保持し、SEC filing identityとBlackRockが公開するEthereum contractを別recordにします。BlackRockが公式に列挙する複数contractは暗黙に1件へ統合しません。
+
+### OUSG
+
+Ondo Short-Term US Government Treasuries Fund (OUSG)をlegal assetとして保持し、SEC filing identity、issuer documentation、Ethereum contract deploymentを分離します。
+
+## Data contract
+
+```text
+issuer / SEC / official contract source
+  ↓
+raw evidence + SHA-256
+  ↓
+normalized issuer / chain / deployment / mint-burn records
+  ↓
+api/v1/tokenized-assets/*.json|csv
+```
+
+fail-closed条件:
+
+- Ethereum mainnet以外のchain ID
+- official registry contractにcodeがない
+- ERC-20 `decimals()` / `totalSupply()`が取得不能
+- raw evidence hash不一致
+- USDC issuer historyが90日未満
+- chain historyが90日未満
+- legal asset / token deployment identityの重複・欠落
+
+## 実行
+
+標準ライブラリのみです。デフォルトRPCは公開Ethereum transportを使いますが、別transportを使う場合も同じmainnet/block provenance contractを満たす必要があります。
+
+```bash
+python tokenized_assets.py
+```
+
+保存済みraw/normalized evidenceからAPIを再生成:
+
+```bash
+python tokenized_assets.py --offline
+```
+
+テスト:
 
 ```bash
 python -m unittest discover -v
 ```
 
-The tests verify transfer classification and the stored issuer snapshots, including unique observation dates, positive circulation values, official Circle source URLs, and the Circle-documented Ethereum contract address.
+## Scope
 
-## Current limitations
-
-- The issuer snapshot history contains only three July 2026 observations, not the 90 days requested by Issue #4.
-- Reserve composition and issuance/redemption flows are not yet stored as structured observations.
-- The Ethereum collector is implemented, but this repository does not yet contain a maintained historical chain-event dataset.
-- Issuer-reported circulation and chain-derived supply are intentionally kept separate.
-- No stablecoin other than USDC is currently stored.
-- There is no trading system, backtest, or investment recommendation in this repository.
+このrepositoryの正準責務はtokenized asset evidenceです。旧FX設計メモ、signal、backtest、trading recommendationは正準datasetではありません。投資助言・売買signalを提供しません。
 
 Tracking issue: https://github.com/KAFKA2306/fx/issues/4
