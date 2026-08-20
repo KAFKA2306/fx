@@ -4,18 +4,24 @@ on:
   pull_request:
     paths:
       - tokenized_assets.py
+      - tokenized_assets_incremental.py
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
+      - data/tokenized-assets/**
+      - api/v1/tokenized-assets/**
       - .github/workflows/tokenized-assets.yml
       - README.md
   push:
     branches: [main]
     paths:
       - tokenized_assets.py
+      - tokenized_assets_incremental.py
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
+      - data/tokenized-assets/**
+      - api/v1/tokenized-assets/**
       - .github/workflows/tokenized-assets.yml
       - README.md
   schedule:
@@ -41,20 +47,33 @@ jobs:
 
       - name: Compile and unit test
         run: |
-          python -m py_compile tokenized_assets.py test_issuer_snapshots.py test_tokenized_assets.py
+          python -m py_compile tokenized_assets.py tokenized_assets_incremental.py test_issuer_snapshots.py test_tokenized_assets.py
           python -m unittest discover -v
 
-      - name: Collect primary evidence
-        env:
-          ETH_RPC_URL: https://eth.drpc.org
+      - name: Materialize stored evidence for pull-request verification
+        if: github.event_name == 'pull_request'
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            python tokenized_assets.py \
-              --data-root build/data/tokenized-assets \
-              --api-dir build/api/v1/tokenized-assets
-          else
-            python tokenized_assets.py
-          fi
+          mkdir -p build/data build/api/v1
+          cp -a data/tokenized-assets build/data/tokenized-assets
+          cp -a api/v1/tokenized-assets build/api/v1/tokenized-assets
+
+      - name: Collect primary evidence incrementally
+        if: github.event_name != 'pull_request'
+        run: |
+          set +e
+          endpoints=(
+            "https://ethereum-rpc.publicnode.com"
+            "https://rpc.ankr.com/eth"
+          )
+          for rpc in "${endpoints[@]}"; do
+            echo "Collecting current finalized state from ${rpc}."
+            python tokenized_assets_incremental.py --rpc-url "$rpc"
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+          done
+          exit "$status"
 
       - name: Audit provenance and coverage
         run: |
