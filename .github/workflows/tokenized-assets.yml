@@ -50,8 +50,8 @@ jobs:
         run: |
           set +e
           endpoints=(
-            "https://ethereum-rpc.publicnode.com"
-            "https://public.1rpc.io/eth"
+            "https://eth.llamarpc.com"
+            "https://eth-pokt.nodies.app/"
             "https://eth.drpc.org"
           )
           for rpc in "${endpoints[@]}"; do
