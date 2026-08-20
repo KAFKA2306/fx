@@ -45,16 +45,32 @@ jobs:
           python -m unittest discover -v
 
       - name: Collect primary evidence
-        env:
-          ETH_RPC_URL: https://eth.drpc.org
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            python tokenized_assets.py \
-              --data-root build/data/tokenized-assets \
-              --api-dir build/api/v1/tokenized-assets
-          else
-            python tokenized_assets.py
-          fi
+          set +e
+          endpoints=(
+            "https://ethereum-rpc.publicnode.com"
+            "https://rpc.ankr.com/eth"
+            "https://eth.drpc.org"
+          )
+          for rpc in "${endpoints[@]}"; do
+            for attempt in 1 2; do
+              echo "Collecting from ${rpc} (attempt ${attempt}/2)."
+              if [ "${{ github.event_name }}" = "pull_request" ]; then
+                python tokenized_assets.py \
+                  --rpc-url "$rpc" \
+                  --data-root build/data/tokenized-assets \
+                  --api-dir build/api/v1/tokenized-assets
+              else
+                python tokenized_assets.py --rpc-url "$rpc"
+              fi
+              status=$?
+              if [ "$status" -eq 0 ]; then
+                exit 0
+              fi
+              sleep "$attempt"
+            done
+          done
+          exit "$status"
 
       - name: Audit provenance and coverage
         run: |
