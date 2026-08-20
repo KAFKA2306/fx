@@ -1,3 +1,4 @@
+import hashlib
 import json
 import unittest
 from pathlib import Path
@@ -19,6 +20,18 @@ class IssuerSnapshotTests(unittest.TestCase):
         self.assertTrue(all(row["circulation_usdc"] > 0 for row in rows))
         self.assertTrue(all(row["reserve_fair_value_usd"] >= row["circulation_usdc"] for row in rows))
         self.assertTrue(all("hubspotusercontent-na1.net" in row["source_url"] for row in rows))
+
+    def test_published_issuer_records_bind_to_raw_sha256(self):
+        rows = json.loads(Path("api/v1/tokenized-assets/issuer.json").read_text())["records"]
+        data_root = Path("data/tokenized-assets")
+        self.assertGreaterEqual(len(rows), 8)
+        for row in rows:
+            evidence_path = Path(row["source_evidence"])
+            self.assertEqual(evidence_path.parts[:2], ("raw", "objects"))
+            self.assertEqual(len(row["source_sha256"]), 64)
+            self.assertTrue(row["source_url"].startswith("https://"))
+            raw = (data_root / evidence_path).read_bytes()
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), row["source_sha256"])
 
     def test_registry_separates_legal_assets_and_token_deployments(self):
         registry = json.loads(Path("data/registry.json").read_text())
