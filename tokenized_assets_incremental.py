@@ -13,6 +13,7 @@ import tokenized_assets as base
 
 DEFAULT_CHAIN_SEED = base.DEFAULT_DATA_ROOT / "normalized" / "chain_weekly.json"
 MIN_SAMPLE_INTERVAL_SECONDS = 6 * 86400
+DEFAULT_LOG_BLOCK_CHUNK = 50
 
 
 def extend_chain_history(
@@ -60,6 +61,91 @@ def extend_chain_history(
     return records
 
 
+def collect_logs_chunked(
+    rpc: base.EthereumRPC,
+    from_block: int,
+    to_block: int,
+    topics: list[Any],
+    key_prefix: str,
+    block_chunk: int = DEFAULT_LOG_BLOCK_CHUNK,
+) -> list[dict[str, Any]]:
+    if block_chunk < 1:
+        raise ValueError("block_chunk must be positive")
+    logs: list[dict[str, Any]] = []
+    for start in range(from_block, to_block + 1, block_chunk):
+        end = min(to_block, start + block_chunk - 1)
+        rows = rpc.call(
+            "eth_getLogs",
+            [
+                {
+                    "address": base.USDC,
+                    "fromBlock": hex(start),
+                    "toBlock": hex(end),
+                    "topics": topics,
+                }
+            ],
+            key=f"{key_prefix}:{start}:{end}",
+        )
+        logs.extend(rows)
+    return logs
+
+
+def collect_mint_burn_window_chunked(
+    rpc: base.EthereumRPC,
+    finalized: dict[str, Any],
+    block_window: int,
+    block_chunk: int = DEFAULT_LOG_BLOCK_CHUNK,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    final_num = base.block_number(finalized)
+    from_num = max(0, final_num - block_window + 1)
+    transfer_topic = "0x" + base.TRANSFER_TOPIC
+    zero_topic = "0x" + base.ZERO_ADDRESS[2:].rjust(64, "0")
+    mint_logs = collect_logs_chunked(
+        rpc,
+        from_num,
+        final_num,
+        [transfer_topic, zero_topic],
+        "usdc:mint-logs",
+        block_chunk,
+    )
+    burn_logs = collect_logs_chunked(
+        rpc,
+        from_num,
+        final_num,
+        [transfer_topic, None, zero_topic],
+        "usdc:burn-logs",
+        block_chunk,
+    )
+    events = [base.normalize_transfer(log, "mint") for log in mint_logs]
+    events.extend(base.normalize_transfer(log, "burn") for log in burn_logs)
+    block_numbers = sorted({event["block_number"] for event in events})
+    block_map = rpc.batch_blocks(block_numbers, "usdc:mint-burn-blocks")
+    normalized: list[dict[str, Any]] = []
+    for event in events:
+        block = block_map[event["block_number"]]
+        event["block_hash"] = block["hash"]
+        event["observed_at"] = datetime.fromtimestamp(base.block_timestamp(block), UTC).isoformat()
+        normalized.append(event)
+    normalized.sort(key=lambda row: (row["block_number"], row["log_index"], row["event_type"]))
+    summary = {
+        "from_block": from_num,
+        "to_block": final_num,
+        "from_block_hash": rpc.call(
+            "eth_getBlockByNumber",
+            [hex(from_num), False],
+            key=f"usdc:mint-burn-boundary:{from_num}",
+        )["hash"],
+        "to_block_hash": finalized["hash"],
+        "mint_count": sum(row["event_type"] == "mint" for row in normalized),
+        "burn_count": sum(row["event_type"] == "burn" for row in normalized),
+        "event_count": len(normalized),
+        "gross_mint_usdc": sum(row["amount"] for row in normalized if row["event_type"] == "mint"),
+        "gross_burn_usdc": sum(row["amount"] for row in normalized if row["event_type"] == "burn"),
+        "block_chunk": block_chunk,
+    }
+    return normalized, summary
+
+
 def collect_incremental(
     registry: dict[str, Any],
     issuer: dict[str, Any],
@@ -67,6 +153,7 @@ def collect_incremental(
     rpc_url: str,
     chain_seed: Path,
     mint_burn_blocks: int,
+    log_block_chunk: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     retrieved_at = datetime.now(UTC).isoformat()
     store = base.EvidenceStore(data_root)
@@ -82,7 +169,12 @@ def collect_incremental(
     seed = base.load_json(chain_seed)
     chain_rows = extend_chain_history(seed, rpc, finalized)
     deployments = base.collect_deployment_snapshots(rpc, registry, finalized)
-    mint_burn_events, mint_burn_summary = base.collect_mint_burn_window(rpc, finalized, mint_burn_blocks)
+    mint_burn_events, mint_burn_summary = collect_mint_burn_window_chunked(
+        rpc,
+        finalized,
+        mint_burn_blocks,
+        log_block_chunk,
+    )
     normalized = base.write_normalized(
         data_root,
         retrieved_at,
@@ -105,6 +197,7 @@ def main() -> None:
     parser.add_argument("--rpc-url", default=base.DEFAULT_RPC_URL)
     parser.add_argument("--chain-seed", type=Path, default=DEFAULT_CHAIN_SEED)
     parser.add_argument("--mint-burn-blocks", type=int, default=1000)
+    parser.add_argument("--log-block-chunk", type=int, default=DEFAULT_LOG_BLOCK_CHUNK)
     args = parser.parse_args()
 
     registry = base.load_json(args.registry)
@@ -118,6 +211,7 @@ def main() -> None:
         args.rpc_url,
         args.chain_seed,
         args.mint_burn_blocks,
+        args.log_block_chunk,
     )
     index = base.build_api(registry, normalized, manifest, args.api_dir)
     print(json.dumps(index["coverage"], sort_keys=True))
