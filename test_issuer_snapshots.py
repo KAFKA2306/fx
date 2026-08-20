@@ -9,7 +9,7 @@ from tokenized_assets import (
     validate_issuer_observations,
     validate_registry,
 )
-from tokenized_assets_incremental import extend_chain_history
+from tokenized_assets_incremental import collect_logs_chunked, extend_chain_history
 
 
 class FakeRPC:
@@ -22,6 +22,17 @@ class FakeRPC:
         if method != "eth_call":
             raise AssertionError(f"unexpected method: {method}")
         return hex(self.total_supply_raw)
+
+
+class FakeLogRPC:
+    def __init__(self):
+        self.calls = []
+
+    def call(self, method, params, key=None):
+        self.calls.append((method, params, key))
+        if method != "eth_getLogs":
+            raise AssertionError(f"unexpected method: {method}")
+        return []
 
 
 class IssuerSnapshotTests(unittest.TestCase):
@@ -92,6 +103,21 @@ class IssuerSnapshotTests(unittest.TestCase):
         rows = extend_chain_history(seed, rpc, finalized)
         self.assertEqual(rows, seed["records"])
         self.assertEqual(rpc.calls, [])
+
+    def test_log_collection_respects_fifty_block_limit(self):
+        rpc = FakeLogRPC()
+        rows = collect_logs_chunked(
+            rpc,
+            100,
+            219,
+            ["0xtopic"],
+            "test",
+            block_chunk=50,
+        )
+        self.assertEqual(rows, [])
+        ranges = [(int(call[1][0]["fromBlock"], 16), int(call[1][0]["toBlock"], 16)) for call in rpc.calls]
+        self.assertEqual(ranges, [(100, 149), (150, 199), (200, 219)])
+        self.assertTrue(all(end - start + 1 <= 50 for start, end in ranges))
 
     def test_registry_separates_legal_assets_and_token_deployments(self):
         registry = json.loads(Path("data/registry.json").read_text())
