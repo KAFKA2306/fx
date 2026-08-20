@@ -97,53 +97,53 @@ def collect_mint_burn_window_chunked(
     block_chunk: int = DEFAULT_LOG_BLOCK_CHUNK,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     final_num = base.block_number(finalized)
-    from_num = max(0, final_num - block_window + 1)
-    transfer_topic = "0x" + base.TRANSFER_TOPIC
-    zero_topic = "0x" + base.ZERO_ADDRESS[2:].rjust(64, "0")
+    start_num = max(0, final_num - block_window + 1)
     mint_logs = collect_logs_chunked(
         rpc,
-        from_num,
+        start_num,
         final_num,
-        [transfer_topic, zero_topic],
-        "usdc:mint-logs",
+        [base.TRANSFER_TOPIC, base.ZERO_TOPIC],
+        "usdc-mint-logs",
         block_chunk,
     )
     burn_logs = collect_logs_chunked(
         rpc,
-        from_num,
+        start_num,
         final_num,
-        [transfer_topic, None, zero_topic],
-        "usdc:burn-logs",
+        [base.TRANSFER_TOPIC, None, base.ZERO_TOPIC],
+        "usdc-burn-logs",
         block_chunk,
     )
-    events = [base.normalize_transfer(log, "mint") for log in mint_logs]
-    events.extend(base.normalize_transfer(log, "burn") for log in burn_logs)
-    block_numbers = sorted({event["block_number"] for event in events})
-    block_map = rpc.batch_blocks(block_numbers, "usdc:mint-burn-blocks")
-    normalized: list[dict[str, Any]] = []
+    events = [base.normalize_log(row) for row in mint_logs] + [base.normalize_log(row) for row in burn_logs]
+    events = sorted(events, key=lambda row: (row["block_number"], row["log_index"], row["transaction_hash"]))
+    unique_blocks = sorted({int(row["block_number"]) for row in events})
+    blocks: dict[int, dict[str, Any]] = {}
+    for offset in range(0, len(unique_blocks), 100):
+        chunk = unique_blocks[offset : offset + 100]
+        blocks.update(rpc.batch_blocks(chunk, key=f"mint-burn-blocks:{offset // 100}"))
     for event in events:
-        block = block_map[event["block_number"]]
-        event["block_hash"] = block["hash"]
-        event["observed_at"] = datetime.fromtimestamp(base.block_timestamp(block), UTC).isoformat()
-        normalized.append(event)
-    normalized.sort(key=lambda row: (row["block_number"], row["log_index"], row["event_type"]))
+        block = blocks[event["block_number"]]
+        if str(block["hash"]).lower() != str(event["block_hash"]).lower():
+            raise ValueError("mint/burn log block hash changed during collection")
+        event["block_timestamp"] = datetime.fromtimestamp(base.block_timestamp(block), UTC).isoformat()
+        event["chain_id"] = base.CHAIN_ID
+        event["contract_address"] = base.USDC
+    mint_events = [row for row in events if row["event_type"] == "mint"]
+    burn_events = [row for row in events if row["event_type"] == "burn"]
     summary = {
-        "from_block": from_num,
+        "from_block": start_num,
         "to_block": final_num,
-        "from_block_hash": rpc.call(
-            "eth_getBlockByNumber",
-            [hex(from_num), False],
-            key=f"usdc:mint-burn-boundary:{from_num}",
-        )["hash"],
         "to_block_hash": finalized["hash"],
-        "mint_count": sum(row["event_type"] == "mint" for row in normalized),
-        "burn_count": sum(row["event_type"] == "burn" for row in normalized),
-        "event_count": len(normalized),
-        "gross_mint_usdc": sum(row["amount"] for row in normalized if row["event_type"] == "mint"),
-        "gross_burn_usdc": sum(row["amount"] for row in normalized if row["event_type"] == "burn"),
+        "chain_id": base.CHAIN_ID,
+        "contract_address": base.USDC,
+        "mint_event_count": len(mint_events),
+        "mint_amount_usdc": sum(float(row["amount_usdc"]) for row in mint_events),
+        "burn_event_count": len(burn_events),
+        "burn_amount_usdc": sum(float(row["amount_usdc"]) for row in burn_events),
         "block_chunk": block_chunk,
     }
-    return normalized, summary
+    summary["net_mint_minus_burn_usdc"] = summary["mint_amount_usdc"] - summary["burn_amount_usdc"]
+    return events, summary
 
 
 def collect_incremental(
