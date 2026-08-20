@@ -1,6 +1,7 @@
 import hashlib
 import json
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 from tokenized_assets import (
@@ -8,6 +9,19 @@ from tokenized_assets import (
     validate_issuer_observations,
     validate_registry,
 )
+from tokenized_assets_incremental import extend_chain_history
+
+
+class FakeRPC:
+    def __init__(self, total_supply_raw: int):
+        self.total_supply_raw = total_supply_raw
+        self.calls = []
+
+    def call(self, method, params, key=None):
+        self.calls.append((method, params, key))
+        if method != "eth_call":
+            raise AssertionError(f"unexpected method: {method}")
+        return hex(self.total_supply_raw)
 
 
 class IssuerSnapshotTests(unittest.TestCase):
@@ -32,6 +46,52 @@ class IssuerSnapshotTests(unittest.TestCase):
             self.assertTrue(row["source_url"].startswith("https://"))
             raw = (data_root / evidence_path).read_bytes()
             self.assertEqual(hashlib.sha256(raw).hexdigest(), row["source_sha256"])
+
+    def test_incremental_chain_history_uses_only_finalized_state(self):
+        seed = {
+            "records": [
+                {
+                    "observed_at": "2026-05-01T00:00:00+00:00",
+                    "block_number": 100,
+                },
+                {
+                    "observed_at": "2026-08-01T00:00:00+00:00",
+                    "block_number": 200,
+                },
+            ]
+        }
+        final_time = int(datetime(2026, 8, 10, tzinfo=UTC).timestamp())
+        finalized = {"number": hex(300), "timestamp": hex(final_time), "hash": "0xfinal"}
+        rpc = FakeRPC(50_000_000 * 1_000_000)
+        rows = extend_chain_history(seed, rpc, finalized)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[-1]["block_number"], 300)
+        self.assertEqual(rows[-1]["block_hash"], "0xfinal")
+        self.assertEqual(rows[-1]["total_supply"], 50_000_000)
+        self.assertEqual(len(rpc.calls), 1)
+        method, params, _ = rpc.calls[0]
+        self.assertEqual(method, "eth_call")
+        self.assertEqual(params[1], hex(300))
+
+    def test_incremental_chain_history_does_not_oversample(self):
+        seed = {
+            "records": [
+                {
+                    "observed_at": "2026-05-01T00:00:00+00:00",
+                    "block_number": 100,
+                },
+                {
+                    "observed_at": "2026-08-18T20:38:47+00:00",
+                    "block_number": 200,
+                },
+            ]
+        }
+        final_time = int(datetime(2026, 8, 20, tzinfo=UTC).timestamp())
+        finalized = {"number": hex(300), "timestamp": hex(final_time), "hash": "0xfinal"}
+        rpc = FakeRPC(1)
+        rows = extend_chain_history(seed, rpc, finalized)
+        self.assertEqual(rows, seed["records"])
+        self.assertEqual(rpc.calls, [])
 
     def test_registry_separates_legal_assets_and_token_deployments(self):
         registry = json.loads(Path("data/registry.json").read_text())
