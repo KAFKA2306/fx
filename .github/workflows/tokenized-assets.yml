@@ -8,6 +8,8 @@ on:
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
+      - data/tokenized-assets/**
+      - api/v1/tokenized-assets/**
       - .github/workflows/tokenized-assets.yml
       - README.md
   push:
@@ -18,6 +20,8 @@ on:
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
+      - data/tokenized-assets/**
+      - api/v1/tokenized-assets/**
       - .github/workflows/tokenized-assets.yml
       - README.md
   schedule:
@@ -46,7 +50,15 @@ jobs:
           python -m py_compile tokenized_assets.py tokenized_assets_incremental.py test_issuer_snapshots.py test_tokenized_assets.py
           python -m unittest discover -v
 
+      - name: Materialize stored evidence for pull-request verification
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p build/data build/api/v1
+          cp -a data/tokenized-assets build/data/tokenized-assets
+          cp -a api/v1/tokenized-assets build/api/v1/tokenized-assets
+
       - name: Collect primary evidence incrementally
+        if: github.event_name != 'pull_request'
         run: |
           set +e
           endpoints=(
@@ -56,14 +68,7 @@ jobs:
           )
           for rpc in "${endpoints[@]}"; do
             echo "Collecting current finalized state from ${rpc}."
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              python tokenized_assets_incremental.py \
-                --rpc-url "$rpc" \
-                --data-root build/data/tokenized-assets \
-                --api-dir build/api/v1/tokenized-assets
-            else
-              python tokenized_assets_incremental.py --rpc-url "$rpc"
-            fi
+            python tokenized_assets_incremental.py --rpc-url "$rpc"
             status=$?
             if [ "$status" -eq 0 ]; then
               exit 0
