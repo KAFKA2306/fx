@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - tokenized_assets.py
+      - tokenized_assets_incremental.py
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - tokenized_assets.py
+      - tokenized_assets_incremental.py
       - test_*.py
       - data/registry.json
       - data/issuer-observations.json
@@ -41,34 +43,31 @@ jobs:
 
       - name: Compile and unit test
         run: |
-          python -m py_compile tokenized_assets.py test_issuer_snapshots.py test_tokenized_assets.py
+          python -m py_compile tokenized_assets.py tokenized_assets_incremental.py test_issuer_snapshots.py test_tokenized_assets.py
           python -m unittest discover -v
 
-      - name: Collect primary evidence
+      - name: Collect primary evidence incrementally
         run: |
           set +e
           endpoints=(
             "https://ethereum-rpc.publicnode.com"
-            "https://rpc.ankr.com/eth"
+            "https://public.1rpc.io/eth"
             "https://eth.drpc.org"
           )
           for rpc in "${endpoints[@]}"; do
-            for attempt in 1 2; do
-              echo "Collecting from ${rpc} (attempt ${attempt}/2)."
-              if [ "${{ github.event_name }}" = "pull_request" ]; then
-                python tokenized_assets.py \
-                  --rpc-url "$rpc" \
-                  --data-root build/data/tokenized-assets \
-                  --api-dir build/api/v1/tokenized-assets
-              else
-                python tokenized_assets.py --rpc-url "$rpc"
-              fi
-              status=$?
-              if [ "$status" -eq 0 ]; then
-                exit 0
-              fi
-              sleep "$attempt"
-            done
+            echo "Collecting current finalized state from ${rpc}."
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              python tokenized_assets_incremental.py \
+                --rpc-url "$rpc" \
+                --data-root build/data/tokenized-assets \
+                --api-dir build/api/v1/tokenized-assets
+            else
+              python tokenized_assets_incremental.py --rpc-url "$rpc"
+            fi
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
           done
           exit "$status"
 
