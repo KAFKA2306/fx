@@ -20,6 +20,14 @@ Own tokenized-asset and stablecoin issuer/on-chain evidence for this repository.
 5. Run the smallest relevant provenance/data tests and exact-revision checks before merge.
 6. Stop when the bounded evidence/capability is verified; do not expand asset coverage solely to create activity.
 
+## Branch lifecycle
+
+- Aside from the default branch and unavoidable platform-managed/protected branches, a persistent branch is permitted only while it is the head branch of a currently open PR.
+- Creating a work branch creates an obligation to open or reuse its canonical PR immediately; do not use branches as backlog, continuation state, backup, archive, or evidence storage.
+- After a PR is merged or closed, delete its head branch after verifying PR/main state. A branch with no open PR is an orphan and must be deleted.
+- Before and after work, compare repository branches with open PR heads. Do not report cleanup/fixed point while an orphan task branch remains.
+- If the available tool cannot delete a branch, record that as a tooling blocker and do not claim cleanup complete. Never create another orphan branch as a workaround.
+
 ## Merge and release are separate
 
 ### PR merge conditions
@@ -44,4 +52,4 @@ A merged PR does not prove live collection or public release. A release/live-sou
 
 ## Completion report
 
-Report verified evidence/coverage Before -> After, canonical hashes/artifacts, Issue/PR/commit/check evidence, then report `merged` and `released` separately with direct evidence for each. Include duplicate collectors/manual work removed and the real remaining blocker.
+Report verified evidence/coverage Before -> After, canonical hashes/artifacts, Issue/PR/commit/check evidence, then report `merged` and `released` separately with direct evidence for each. Include branch cleanup state, duplicate collectors/manual work removed and the real remaining blocker.
